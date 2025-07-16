@@ -50,7 +50,9 @@ public class Pedido {
 	@Column(name = "descricao_pedido", length = 500)
 	private String descricaoPedido;
 	@Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+//	private Boolean ativo = true;
 	private Boolean ativo;
+
 	
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
