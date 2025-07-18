@@ -1,46 +1,112 @@
 package br.com.cotiinformatica.domain.services.impl;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.cotiinformatica.domain.entities.Pedido;
-import br.com.cotiinformatica.domain.enums.StatusPedido;
+import br.com.cotiinformatica.domain.events.PedidoCriadoEvent;
 import br.com.cotiinformatica.domain.exceptions.PedidoNaoEncontradoException;
 import br.com.cotiinformatica.domain.models.PedidoRequestModel;
 import br.com.cotiinformatica.domain.models.PedidoResponseModel;
 import br.com.cotiinformatica.domain.services.interfaces.PedidoService;
+import br.com.cotiinformatica.infrainstucture.outbox.OutboxMessage;
+import br.com.cotiinformatica.infrainstucture.repositories.OutboxMessageRepository;
 import br.com.cotiinformatica.infrainstucture.repositories.PedidoRepository;
 import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 public class PedidoServiceImpl implements PedidoService {
 	
 	private final PedidoRepository pedidoRepository;
+	private final OutboxMessageRepository outboxMessageRepository;
 	private final ModelMapper mapper;
+	private final ObjectMapper objectMapper;
+//	
+//	@Transactional
+//	@Override
+//	public PedidoResponseModel criarPedido(PedidoRequestModel model) {
+//	
+//		//Capturando os dados da requisição e criando um novo pedido
+//		var pedido = mapper.map(model, Pedido.class);
+//				
+//		//Salvando o pedido no banco de dados
+//		pedidoRepository.save(pedido);
+//		
+//		//Criando um evento "PedidoCriado" com os dados do pedido
+//		var event = mapper.map(pedido, PedidoCriadoEvent.class);
+//		
+//		//Criando um registro para a tabela de saída (OutboxMessage)
+//		var message = new OutboxMessage();
+//		message.setAggregateType("Pedido"); //nome da entidade
+//		message.setAggregateId(pedido.getId().toString()); //id do pedido
+//		message.setType("PedidoCriado"); //nome do evento
+//		
+//		try {
+//			//Serializando os dados do evento em JSON
+//			message.setPayload(objectMapper.writeValueAsString(event));
+//		}
+//		catch(JsonProcessingException e) {
+//			throw new IllegalStateException(e.getMessage());
+//		}
+//		
+//		//Salvando o registro do evento no banco de dados
+//		outboxMessageRepository.save(message);
+//		
+//		//Retornando os dados do pedido cadastrado
+//		return mapper.map(pedido, PedidoResponseModel.class);
+//	}
 	
+
+
+	@Transactional
 	@Override
 	public PedidoResponseModel criarPedido(PedidoRequestModel model) {
-//		var pedido = new Pedido();
-//
-//		pedido.setDataPedido(model.getDataPedido());
-//		pedido.setValorPedido(BigDecimal.valueOf(model.getValorPedido()));
-//		pedido.setNomeCliente(model.getNomeCliente());
-//		pedido.setDescricaoPedido(model.getDescricaoPedido());
-//		pedido.setStatus(StatusPedido.valueOf(model.getStatus()));
-		
+	
+		//Capturando os dados da requisição e criando um novo pedido
 		var pedido = mapper.map(model, Pedido.class);
-		
-		pedido.setAtivo(true);
+				
+		//Salvando o pedido no banco de dados
 		pedidoRepository.save(pedido);
 		
+		//Criando um evento "PedidoCriado" com os dados do pedido
+		var event = new PedidoCriadoEvent(
+				pedido.getId(),
+				pedido.getDataPedido(),
+				pedido.getValorPedido(),
+				pedido.getNomeCliente(),
+				pedido.getDescricaoPedido(),
+				pedido.getStatus().toString()
+				);
+		
+		//Criando um registro para a tabela de saída (OutboxMessage)
+		var message = new OutboxMessage();
+		message.setAggregateType("Pedido"); //nome da entidade
+		message.setAggregateId(pedido.getId().toString()); //id do pedido
+		message.setType("PedidoCriado"); //nome do evento
+		
+		try {
+			//Serializando os dados do evento em JSON
+			message.setPayload(objectMapper.writeValueAsString(event));
+		}
+		catch(JsonProcessingException e) {
+			throw new IllegalStateException(e.getMessage());
+		}
+		
+		//Salvando o registro do evento no banco de dados
+		outboxMessageRepository.save(message);
+		
+		//Retornando os dados do pedido cadastrado
 		return mapper.map(pedido, PedidoResponseModel.class);
 	}
+
 	
 	@Override
 	public PedidoResponseModel alterarPedido(UUID id, PedidoRequestModel model) {
@@ -66,7 +132,7 @@ public class PedidoServiceImpl implements PedidoService {
 		
 		return mapper.map(pedido, PedidoResponseModel.class);
 	}
-
+	
 	@Override
 	public Page<PedidoResponseModel> consultarPedidos(Pageable pageable) {
 		
@@ -82,6 +148,5 @@ public class PedidoServiceImpl implements PedidoService {
 		
 		return mapper.map(pedido, PedidoResponseModel.class);
 	}
-
-	
 }
+

@@ -29,7 +29,7 @@ public class SwaggerConfiguration {
 				.title("API de Pedidos - Treinamento")
 				.description("Projeto desenvolvido durante o curso **Java Avançado - Formação Arquiteto**.")
 				.version("v1.0.0")
-				.termsOfService("https://www.cotiinformatica.com.br/termos")
+				.termsOfService("https://www.empresateste.com.br/termos")
 				.contact(new Contact()
 					.name("Nome empresa")
 					.email("contato@empresateste.com.br")
